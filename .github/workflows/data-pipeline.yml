@@ -2,11 +2,23 @@ name: data-pipeline-workflow
 
 on:
   push:
+    branches: [main]
+    paths-ignore:
+      - 'output_folder/**'
+      - 'executed_data_pipeline_OD.ipynb'
   workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-pipeline
+  cancel-in-progress: false
 
 jobs:
   run-data-pipeline:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repo content
@@ -16,25 +28,22 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Install Jupyter
-        run: pip install jupyter
+        run: |
+          pip install -r requirements.txt
+          pip install jupyter
 
       - name: Run data pipeline
-        run: jupyter nbconvert --to notebook --execute data_pipeline_OD.ipynb --output executed_data_pipeline_OD.ipynb
+        run: jupyter nbconvert --to notebook --execute data_pipeline_OD.ipynb --output executed_data_pipeline_OD.ipynb --ExecutePreprocessor.timeout=-1
 
-      - name: Check for changes
+      - name: Commit and push if changes
         run: |
           git config user.name 'github-actions'
           git config user.email 'github-actions@github.com'
-          git add .
-          git diff --staged --quiet || echo "changes=true" >> $env:GITHUB_ENV
-
-      - name: Commit and push if changes
-        if: env.changes == 'true'
-        run: |
-          git commit -m "updated"
-          git push
+          git add output_folder/
+          if ! git diff --staged --quiet; then
+            git commit -m "Update output Excel file"
+            git push
+          fi
