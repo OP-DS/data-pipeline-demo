@@ -4,8 +4,7 @@ on:
   push:
     branches: [main]
     paths-ignore:
-      - 'output_folder/**'
-      - 'executed_data_pipeline_OD.ipynb'
+      - 'data/**'
   workflow_dispatch:
 
 permissions:
@@ -42,7 +41,7 @@ jobs:
         run: |
           git config user.name 'github-actions'
           git config user.email 'github-actions@github.com'
-          git add output_folder/
+          git add data/
           if ! git diff --staged --quiet; then
             git commit -m "Update output Excel file"
             git push
